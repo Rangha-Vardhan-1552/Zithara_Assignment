@@ -10,20 +10,21 @@ router.get('/records', async (req, res) => {
     const offset = (page - 1) * limit;
 
     const query = `
-    SELECT
+      SELECT
   sno,
   customer_name,
   age,
   phone,
   location,
-  created_at
+  TO_CHAR(created_at, 'YYYY-MM-DD') AS extracted_date,
+  TO_CHAR(created_at, 'HH24:MI:SS') AS time
 FROM
   records
 ORDER BY
   created_at
 LIMIT
   ${limit} OFFSET ${offset};
- 
+
     `;
 
     const result = await pool.query(query);

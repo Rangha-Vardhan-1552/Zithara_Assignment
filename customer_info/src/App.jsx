@@ -10,6 +10,9 @@ function App() {
   const [currentPage, setCurrentPage] = useState(1);
   const [recordsPerPage] = useState(20);
   const [formData, setFormData]= useState({})
+  const [success,setSuccess] = useState('')
+  const [error, setError] =useState('')
+  const [sortOrder, setSortOrder] = useState('time');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -40,11 +43,15 @@ function App() {
           location: formData.location,
         
         });
-
+        if(response.status===200){
+          setSuccess(response.data.message)
+          setError('')
+        }
         console.log('Data insert successfully :', response.data);
-
+        setError('')
       } catch (error) {
-        console.error('Error sending data:', error.message);
+        setError(error.message)
+        setSuccess('')
       }
     };
 
@@ -59,43 +66,51 @@ function App() {
 
   console.log(formData)
 
+  const sortedRecords = [...filteredRecords].sort((a, b) => {
+    const aValue = sortOrder === 'date' ? new Date(a.date) : a.time;
+    const bValue = sortOrder === 'date' ? new Date(b.date) : b.time;
+  
+    if (sortOrder === 'date') {
+      return aValue - bValue;
+    } else {
+      return aValue.localeCompare(bValue);
+    }
+  });
+  
+  const renderedRecords = searchTerm ? sortedRecords : filteredRecords;
+  
+
   return (
     <>
     <div className='p-3 max-w-lg mx-auto shadow-lg hover:shadow-2xl hover:bg-gray-100 mt-7'>
       <h1 className='text-3xl font-semibold text-center my-7'>Customer Registration</h1>
-      <div className='flex flex-col gap-4'>
-        <input type='text' placeholder='customer name' className='border p-3 rounded-lg ' id='customer_name' onChange={HandleInputChange}></input>
-        <input type='text' placeholder='age' className='border p-3 rounded-lg ' id='age' onChange={HandleInputChange}></input>
-        <input type='number' placeholder='phone' className='border p-3 rounded-lg ' id='phone' onChange={HandleInputChange}></input>
-        <input type='text' placeholder='location' className='border p-3 rounded-lg ' id='location' onChange={HandleInputChange}></input>
+      <div className='flex flex-col gap-4 mb-4'>
+        <input type='text' placeholder='customer name' className='border p-3 rounded-lg ' id='customer_name' onChange={HandleInputChange} required></input>
+        <input type='text' placeholder='age' className='border p-3 rounded-lg ' id='age' onChange={HandleInputChange} required></input>
+        <input type='number' placeholder='phone' className='border p-3 rounded-lg ' id='phone' onChange={HandleInputChange} required></input>
+        <input type='text' placeholder='location' className='border p-3 rounded-lg ' id='location' onChange={HandleInputChange} required></input>
         <button className='border p-3 rounded-lg bg-slate-700 uppercase text-white hover:opacity-90 disabled:opacity-80' onClick={submitHandler}>
           submit
         </button>
       </div>
+      <p className='text-green-800 font-semibold text-center'>{success}</p>
+      <p className='text-red-700 font-semibold text-center'>{error}</p>
       </div>
     <div className='text-center m-7 p-3'>
       <h1 className='text-slate-700 font-semibold text-center text-3xl'>Customer Details</h1>
       <div className='flex flex-row justify-between max-w-6xl mb-6'>
       <Search onSearch={handleSearch} />
-        <button id="dropdownHoverButton" data-dropdown-toggle="dropdownHover" data-dropdown-trigger="hover" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800" type="button">Sort <svg class="w-2.5 h-2.5 ms-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
-        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 4 4 4-4"/>
-        </svg>
-        </button>
-
-        <div id="dropdownHover" class="z-10 hidden bg-white divide-y divide-gray-100 rounded-lg shadow w-44 dark:bg-gray-700">
-            <ul class="py-2 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownHoverButton">
-              <li>
-                <a href="#" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Date</a>
-              </li>
-              <li>
-                <a href="#" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Time</a>
-              </li>
-            </ul>
-        </div>
-
+      <div className='flex flex-row items-center'>
+        <label className='text-lg font-semibold'>Sort:</label>
+        <select defaultValue='time' className='border rounded-lg p-2 mx-5' onChange={(e) => setSortOrder(e.target.value)}>
+        <option value="date" id='date'>date</option>
+        <option value="time" id='time'>time</option>
+       </select>
+      </div>
+       
       </div>
       
-      <Table records={filteredRecords} />
+      <Table records={renderedRecords} />
       <Pagination
         currentPage={currentPage}
         totalRecords={records.length}
