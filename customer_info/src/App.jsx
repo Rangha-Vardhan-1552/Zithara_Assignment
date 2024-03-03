@@ -7,21 +7,51 @@ import api from './services/api';
 function App() {
   const [records, setRecords] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [recordsPerPage] = useState(20);
+  const [page, setPage] = useState(1);
+  const [limit,setLimit] = useState(20);
   const [formData, setFormData]= useState({})
   const [success,setSuccess] = useState('')
   const [error, setError] =useState('')
-  const [sortOrder, setSortOrder] = useState('time');
+  const [name, setName] = useState('');
+  const [location, setLocation] = useState('');
+  const [date, setDate] = useState('');
+  const [time, setTime] = useState('');
+  const [sortDate, setSortDate] = useState('asc');
+  const [sortTime, setSortTime] = useState('asc');
+  const [startIndex, setStartIndex]=useState(0)
+  const [showMore, setShowMore] = useState(false)
 
   useEffect(() => {
-    const fetchData = async () => {
-      const response = await api.get(`/records?page=${currentPage}&limit=${recordsPerPage}`);
-      setRecords(response.data);
-    };
+    // Initial load of records
+    submitSearch();
+  }, [page,limit]); // Empty dependency array ensures the effect runs only once
 
-    fetchData();
-  }, [currentPage, recordsPerPage]);
+  const submitSearch = () => {
+    api.get(`/records`, {
+      params: {
+        page: 1,
+        limit: 20,
+        name,
+        location,
+        date,
+        time,
+        startIndex: 0,
+        sortDate,
+        sortTime,
+      },
+    })
+    .then(response => {
+      setRecords(response.data);
+      if(records.length>=20){
+        setShowMore(true)
+      }else{
+        setShowMore(false)
+      }
+    })
+    .catch(error => {
+      console.error('Error fetching records:', error);
+    });
+  };
 
 
   const handleSearch = term => {
@@ -66,20 +96,40 @@ function App() {
 
   console.log(formData)
 
-  const sortedRecords = [...filteredRecords].sort((a, b) => {
-    const aValue = sortOrder === 'date' ? new Date(a.date) : a.time;
-    const bValue = sortOrder === 'date' ? new Date(b.date) : b.time;
+  const handleShowMore = async () => {
+    try {
+      setLimit(limit+startIndex)
+      const response = await api.get(`/records`, {
+        params: {
+          page: 1,
+          limit,
+          name,
+          location,
+          date,
+          time,
+          startIndex:limit,
+          sortDate,
+          sortTime,
+        },
+      });
   
-    if (sortOrder === 'date') {
-      return aValue - bValue;
-    } else {
-      return aValue.localeCompare(bValue);
+      const newRecords = response.data;
+  
+      setRecords((prevRecords) => [...prevRecords, ...newRecords]);
+  
+      if (newRecords.length < limit) {
+        setShowMore(false);
+      }else{
+        setShowMore(true)
+      }
+    } catch (error) {
+      console.error('Error fetching records:', error);
     }
-  });
-  
-  const renderedRecords = searchTerm ? sortedRecords : filteredRecords;
+  };
   
 
+
+      
   return (
     <>
     <div className='p-3 max-w-lg mx-auto shadow-lg hover:shadow-2xl hover:bg-gray-100 mt-7'>
@@ -101,22 +151,33 @@ function App() {
       <div className='flex flex-row justify-between max-w-6xl mb-6'>
       <Search onSearch={handleSearch} />
       <div className='flex flex-row items-center'>
-        <label className='text-lg font-semibold'>Sort:</label>
-        <select defaultValue='time' className='border rounded-lg p-2 mx-5' onChange={(e) => setSortOrder(e.target.value)}>
-        <option value="date" id='date'>date</option>
-        <option value="time" id='time'>time</option>
+        <label className='text-lg font-semibold'>Time:</label>
+        <select id='sortTime' valueclassName='border rounded-lg p-2 mx-5'  value={sortTime} onChange={(e) => setSortTime(e.target.value)}>
+        <option value='asc' >ascending</option>
+        <option value='desc'>descending</option>
        </select>
       </div>
-       
+      <div className='flex flex-row items-center'>
+        <label className='text-lg font-semibold'>Date:</label>
+        <select id='sortDate' valueclassName='border rounded-lg p-2 mx-5'  value={sortDate} onChange={(e) => setSortDate(e.target.value)}>
+        <option value='asc' >oldest </option>
+        <option value='desc'>newest</option>
+       </select>
+      </div>
+      <button className='text-white bg-slate-700 rounded-lg p-3' onClick={submitSearch}>Filter</button>
       </div>
       
-      <Table records={renderedRecords} />
-      <Pagination
-        currentPage={currentPage}
+      <Table records={filteredRecords?filteredRecords:records} />
+      {/* <Pagination
+        currentPage={page}
         totalRecords={records.length}
-        recordsPerPage={recordsPerPage}
-        onPageChange={setCurrentPage}
-      />
+        recordsPerPage={limit}
+        onPageChange={setPage}
+      /> */}
+      {showMore && (
+          <button className='bg-gray-200 rounded-lg border  hover:underline p-3 px-6  text-center ' onClick={handleShowMore}>Next</button>
+
+          )}
     </div>
     </>
   );
